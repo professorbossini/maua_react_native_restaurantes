@@ -8,10 +8,6 @@ import 'firebase/storage';
 import 'firebase/database';
 import * as firebase from 'firebase';
 
-import ENV from '../env'
-
-if (!firebase.apps.length)
-    firebase.initializeApp(ENV)
 
 
 const firestore = firebase.firestore();
@@ -19,9 +15,12 @@ const storage = firebase.storage();
 const database = firebase.database();
 
 
+const restaurantesCollection = firestore.collection('restaurantes');
+const imagensRef = storage.ref('imagens');
+const imagensCounterRef = database.ref('imagensCounter');
 
 
-const AdicionarRestauranteTela = () => {
+const AdicionarRestauranteTela = (props) => {
 
 
     const tirarFoto = async () => {
@@ -37,6 +36,24 @@ const AdicionarRestauranteTela = () => {
     const [categoria, setCategoria] = useState('Categoria');
     const [preco, setPreco] = useState(1);
     const [fotoURI, setFotoURI] = useState();
+
+    const salvarRestaurante = async () => {
+        const foto = await fetch(fotoURI);
+        const blob = await foto.blob();
+        const idImagem = (await imagensCounterRef.once('value')).val().toString();
+        await imagensRef.child(idImagem).put(blob);
+        const downloadURL = await imagensRef.child(idImagem).getDownloadURL();
+        imagensCounterRef.set(+idImagem + 1);
+        restaurantesCollection.add({
+            nome: nome,
+            cidade: cidade,
+            fotoURL: downloadURL,
+            preco: preco,
+            categoria: categoria,
+            avaliacaoMedia: 0,
+            qtdeAvaliacoes: 0
+        });
+    }
 
     return (
         <View
@@ -104,6 +121,10 @@ const AdicionarRestauranteTela = () => {
 
             <TouchableOpacity
                 style={estilos.fab}
+                onPress={() => {
+                    salvarRestaurante()
+                    props.navigation.goBack()
+                }}
             >
                 <Text
                     style={estilos.iconeFab}

@@ -1,11 +1,69 @@
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, FlatList, TouchableWithoutFeedback, Image } from 'react-native';
 
+import 'firebase/firestore';
+import * as firebase from 'firebase';
+
+import ENV from '../env'
+
+if (!firebase.apps.length)
+    firebase.initializeApp(ENV);
+
+const firestore = firebase.firestore();
+const restaurantesCollection = firestore.collection('restaurantes');
 
 const RestaurantesTela = (props) => {
+
+    const [restaurantes, setRestaurantes] = useState([]);
+
+    useEffect(() => {
+        restaurantesCollection.onSnapshot((collection) => {
+            setRestaurantes(collection.docs.map(doc => {
+                return {
+                    categoria: doc.data().categoria,
+                    cidade: doc.data().cidade,
+                    fotoURL: doc.data().fotoURL,
+                    nome: doc.data().nome,
+                    preco: doc.data().preco,
+                    chave: doc.id,
+                    avaliacaoMedia: doc.data().avaliacaoMedia,
+                    qtdeAvaliacoes: doc.data().qtdeAvaliacoes
+                }
+            }));
+        })
+    }, []);
+
+
     return (
         <View style={estilos.container}>
-            <Text>Restaurantes</Text>
+
+            <FlatList
+                data={restaurantes}
+                renderItem={restaurante => (
+                    <TouchableWithoutFeedback onPress={() => {
+                        props.navigation.navigate('DetalhesRestauranteTela', {
+                            restaurante: restaurante.item
+                        })
+                    }}>
+                        <View
+                            style={estilos.restauranteItemView}>
+                            <Image
+                                source={{ uri: restaurante.item.fotoURL }}
+                                style={estilos.restauranteImage}
+                            />
+                            <Text
+                                style={estilos.nomeRestauranteText}>
+                                {restaurante.item.nome}
+                            </Text>
+                        </View>
+
+                    </TouchableWithoutFeedback>
+                )}
+                keyExtractor={restaurante => restaurante.chave}
+            />
+
+
+
             <TouchableOpacity
                 onPress={() => props.navigation.navigate('AdicionarRestauranteTela')} style={estilos.fab}>
                 <Text style={estilos.iconeFab}>+</Text>
@@ -15,6 +73,23 @@ const RestaurantesTela = (props) => {
 }
 
 const estilos = StyleSheet.create({
+    nomeRestauranteText: {
+        fontSize: 16
+    },
+    restauranteItemView: {
+        padding: 4,
+        borderBottomWidth: 1,
+        borderBottomColor: '#DDD',
+        marginBottom: 4,
+        alignItems: 'center',
+        width: '80%',
+        alignSelf: 'center'
+    },
+    restauranteImage: {
+        width: '60%',
+        height: 100,
+        marginBottom: 8
+    },
     container: {
         flex: 1
     },
